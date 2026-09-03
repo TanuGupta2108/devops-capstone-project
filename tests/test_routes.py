@@ -41,7 +41,7 @@ class TestAccountService(TestCase):
 
     def setUp(self):
         """Runs before each test"""
-        db.session.query(Account).delete()  # clean up the last tests
+        db.session.query(Account).delete()
         db.session.commit()
 
         self.client = app.test_client()
@@ -92,7 +92,7 @@ class TestAccountService(TestCase):
         response = self.client.post(
             BASE_URL,
             json=account.serialize(),
-            content_type="application/json"
+            content_type="application/json",
         )
         self.assertEqual(response.status_code, status.HTTP_201_CREATED)
 
@@ -110,8 +110,12 @@ class TestAccountService(TestCase):
 
     def test_bad_request(self):
         """It should not Create an Account when sending the wrong data"""
-        response = self.client.post(BASE_URL, json={"name": "not enough data"})
-        self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
+        response = self.client.post(
+            BASE_URL, json={"name": "not enough data"}
+        )
+        self.assertEqual(
+            response.status_code, status.HTTP_400_BAD_REQUEST
+        )
 
     def test_unsupported_media_type(self):
         """It should not Create an Account when sending the wrong media type"""
@@ -119,27 +123,63 @@ class TestAccountService(TestCase):
         response = self.client.post(
             BASE_URL,
             json=account.serialize(),
-            content_type="test/html"
+            content_type="test/html",
         )
-        self.assertEqual(response.status_code, status.HTTP_415_UNSUPPORTED_MEDIA_TYPE)
+        self.assertEqual(
+            response.status_code,
+            status.HTTP_415_UNSUPPORTED_MEDIA_TYPE,
+        )
 
     # ADD YOUR TEST CASES HERE ...
+
     def test_get_account(self):
         """It should Read a single Account"""
         account = self._create_accounts(1)[0]
+
         resp = self.client.get(
-            f"{BASE_URL}/{account.id}", content_type="application/json"
+            f"{BASE_URL}/{account.id}",
+            content_type="application/json",
         )
+
         self.assertEqual(resp.status_code, status.HTTP_200_OK)
+
         data = resp.get_json()
         self.assertEqual(data["name"], account.name)
 
     def test_get_account_not_found(self):
         """It should not Read an Account that is not found"""
         resp = self.client.get(f"{BASE_URL}/0")
-        self.assertEqual(resp.status_code, status.HTTP_404_NOT_FOUND)
-        
-    def test_get_account_not_found(self):
-        """It should not Read an Account that is not found"""
-        resp = self.client.get(f"{BASE_URL}/0")
-        self.assertEqual(resp.status_code, status.HTTP_404_NOT_FOUND)
+
+        self.assertEqual(
+            resp.status_code,
+            status.HTTP_404_NOT_FOUND,
+        )
+
+    def test_get_accounts(self):
+        """It should List all Accounts"""
+        accounts = self._create_accounts(3)
+
+        resp = self.client.get(BASE_URL)
+
+        self.assertEqual(
+            resp.status_code,
+            status.HTTP_200_OK,
+        )
+
+        data = resp.get_json()
+        self.assertEqual(len(data), 3)
+
+        for account in accounts:
+            self.assertIn(account.serialize(), data)
+
+    def test_get_accounts_empty(self):
+        """It should List all Accounts when there are none"""
+        resp = self.client.get(BASE_URL)
+
+        self.assertEqual(
+            resp.status_code,
+            status.HTTP_200_OK,
+        )
+
+        data = resp.get_json()
+        self.assertEqual(data, [])
